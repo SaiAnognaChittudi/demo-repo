@@ -1,0 +1,161 @@
+---
+title: "pacdev assignment"
+author: "Sai Anogna Chittudi"
+date: "26-03-2023"
+output: 
+  html_document:
+    toc: true
+---
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE)
+
+library(tidyverse)
+```
+
+```{r}
+pacdev <- read.csv("pacdev_data.csv") %>% 
+  mutate(pool = factor(pool, levels = c( "no", "yes"))) %>% 
+  mutate(garage = factor(garage, levels = c("no", "yes")))
+
+glimpse(pacdev)
+
+```
+## Q1
+1. Plot price against sqft with a summary linear regression line.
+
+2. Determine the equation of the summary line in the plot (by fitting the corresponding regression model) and interpret the coefficients for the intercept and sqft in the equation.
+
+In this and subsequent questions interpret means: write down in concrete terms what each coefficient says about the value of a home, or the change in the value of a home, conditional on predictors.
+
+```{r}
+ggplot(data = pacdev, mapping = aes(x = sqft, y = price)) +
+  geom_point() +
+  geom_smooth(method = "lm", se = FALSE) +  
+  labs(title = "price Vs sqrt")
+
+lm( price ~ sqft, data = pacdev) %>% 
+  summary()
+
+```
+> The summary line in the plot is linear regression line so it is a linear line with the equation represented by Y = mX + c, where m is slope and c is Y-intercept. 
+
+> Here Y variable is price , X variable  is sqft and the slope value m = 269.345 and Y-intercept c = 40623.019. So the equation is Price = (269.345 * sqft) + 40623.019. 
+> The Y-intercept represents the value of Y variable when there is no interference of X-variable i.e, when there is no influence of sqft, the price of the houses will be 40623.019. 
+> The slope represents that value of change in Y variable with 1 unit change in X variable. So, for a unit change in sqrt there is positive change of 269.345 in price.
+
+> To conclude, there a positive relation between price ans sqft which means with increase in sqft the price of the home increases.
+ 
+
+## Q2
+1. Fit a multiple regression model of price with all the available predictors entered additively (+). However, create a centered version of sqft (by subtracting the mean from each observation) and use this as a predictor rather than the original variable. (There should be 8 coefficients in this model.)
+
+2. Interpret the 4 coefficients for the intercept, centered sqft, and city. Remember that Long Beach is the (missing) reference city in the model, assuming that factor levels have been assigned alphabetically.
+
+```{r}
+
+p <- pacdev %>% mutate(center_sqft = sqft - mean(sqft))
+
+(non_int <- lm(price ~ center_sqft + city + pool + garage +bed + bath, data = p )) %>% 
+  summary
+
+summary(factor(p$city))
+
+
+```
+> Calculated the center of sqft equal to sqft - mean(sqft) and used as the predictor along with other predictors for the multiple regression line. As we can observe from the results that all the coefficients have positive effect except for the garage and bath predictors. According to the P-values the statistically significant values that are effecting the home prices are centered sqft , cities and garage predictors.
+
+> Intercept value is 528103.213 which is positive. also for the centered sqft the slope is 271.561 positive value so when sqft increases price of home increases and similarly, cities - santa Monica and westwood both have positive values so the relation of price with cities is positive. But when observed the slope for Santa Monica is 190239.704 which is considerably large compared to the slope for Westwood which is 88020.719 and also greater slope than Long Beach which is considered as the base value.
+
+## Q3
+
+1. To the above model add an interaction between centered sqft and city. This means that you combine these terms multiplicatively (*) rather than additively (+).
+
+2. Create a visualization of this interaction model, making sure to use centered sqft in the plot.
+
+3. Interpret 6 coefficients from this model: the intercept, the main effects for centered sqft and city, and the interaction effects.
+
+```{r}
+(int <- lm(price ~ center_sqft * city + pool + garage + bed + bath , data = p )) %>% 
+  summary
+
+ggplot(p, aes(center_sqft, price, col = city))+
+  geom_point()+      
+  geom_smooth(method = 'lm',se = FALSE)+
+  labs(title = "Visualization of the interaction model")
+
+```
+> Created the interaction model with the interaction of centered sqft and city along with the other predictors for predicting the price variable.
+
+> Created the Visulization for the interaction model
+
+> 6 coefficients : 1. the intercept value is 527445.45 which is positive. 
+2. center_sqft has positive slope of value 240.63 so when centered sqft increases 1 unit, price increases by 240.63 units. 
+3. The city Santa Monica variable also have a positive slope of 189904.29 which means that the increase of 1 unit will increase the price by 189904.29.
+4. The city Westwood variable also have a positive slope of 88037.11 which means that the increase of 1 unit will increase the price by 88037.11.
+
+> 5. But the main consideration coefficients are the interaction coefficients which combines the centered sqft and city variables. The centered sqft with Santa Monica has the slope of 90.09 which indicates that the unit increase in centered sqft in Santa Monica will lead to 90.09 increase in price of home in Santa Monica. 
+> 6. The centered sqft with Westwood has the slope of 37.95 which indicates that the unit increase in centered sqft in Westwood will lead to 37.95 increase in price of home in Westwood.
+
+> Furthermore, we can see from the visualization of the interaction model that the increase of centered sqft in Santa Monica has a large impact on the price of homes than in the cities of Westwood and Long Beach.
+
+## Q4
+
+Is this a good model? To assess model fit create three plots:
+
+1. A residual plot with model residuals on the vertical axis and the fitted values on the horizontal axis. Add a summary line.
+
+2. A plot of the model’s fitted values (again on the horizontal axis) against observed values of price. Add a summary line.
+
+3. A histogram of the residuals.
+
+Two functions will extract the fitted values from a model object: fitted(object) and predict(object). (If the newdata argument is omitted, predict() just returns the fitted values.)
+
+Comment on model fit.
+
+```{r}
+p %>% 
+  mutate(fitted = fitted(int),
+         residuals = price - fitted) %>% 
+  ggplot(aes(fitted, residuals)) +
+  geom_point() +
+  geom_smooth(method = "lm", se = F, col = "red") +
+  labs(title = "residuals Vs Fitted for the interaction model")
+
+p %>% 
+  mutate(fitted = fitted(int)) %>% 
+  ggplot(aes(fitted, price )) +
+  geom_point() +
+  geom_smooth(method = "lm", se = F, col = "red") +
+  labs(title = "Observed Vs Fitted prices for the interaction model")
+
+p %>% 
+  mutate(fitted = fitted(int),
+         residuals = price - fitted) %>% 
+  ggplot(aes(residuals))+
+  geom_histogram()+
+    labs(title = "histogram of residues")
+
+```
+
+> The scatter plot between the fitted value and the residuals have the linear regression line at residuals = 0, which indicates that there are no large varing patters. This concludes that this multiple linear regression model is a good model for the data
+
+>The scatter plot observed Vs the fitted values of the price variable is displaying the linear condition as assumed with the positive slope.
+
+> The third plot is displaying the histogram of residues which is expected to be a normally distributed for the model to be considered good. As observed from the above histogram, the residues are distributed around zero in the shape of normal distribution which proves that the model created with the data is the good model
+
+## Q5
+What should Andrew say in his presentation? Write a brief summary of the quantitative evidence that he should use to support this recommendation.
+
+> Andrew in the presentation to the PACDEV team can recommend that they have to focus more on the Santa Monica for the increasing of sqft of the homes than in the cities of Westwood and Long beach as price increase for each additional sqft is more in Santa Monica than in the other cities. He can include the values from the multiple regression model to support his recommendation as below.
+
+>    In the interaction type multiple linear regression model, the slope coefficient of Santa Monica City with centered sqft interaction is 90.09, whereas the same for Westwood city is 37.95, which indicates that the per sqft increase in house in santa Monica will have the 2.37 times more effect on price than the per sqft increase in house in westwood. 
+
+>    The visualization of the same model from Q3 should also be included in the presentation from which it is clearly displayed that the change in price with respect to sqft is having the positive slopes where Santa Monica is having large postive slope value followed by Westwood and at the last Long Beach.
+
+>    Furthermore, to represent the PACDEV team that the model he is using for recommodation is a good model he can compare the R-squared values and Residuals standard error(RSE) values from the simple linear regression model, Mulitple linear model without interaction and multiple linear model with interaction in the presention in the form of table. The model with large R-squared values and low RSE values is considered the good model.
+  The simple linear regression model have R-squared value of 0.1951 and RSE is 210300 while for multiple linear regression model without interaction R-squared value is 0.3075 and RSE is 195000 and for multiple linear regression model with interaction is having R-squared value of 0.0311 and RSE is 194500. From the we can conclude that the Multiple linear regression with interaction is a good model for modelling the PACDEV data.
+
+>    Aditionally as establised in Q4, the plots can be included in the presention to support that the considered model is a good model and the suggestion from the model is that the per sqft increase in Santa Monica will have large effect on prices compared to Westwood and Long beach homes.
+
+## Challenge
+
